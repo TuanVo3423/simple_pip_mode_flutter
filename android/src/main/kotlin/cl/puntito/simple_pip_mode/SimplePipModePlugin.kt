@@ -302,7 +302,7 @@ class SimplePipModePlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
 
     private fun setMicState(call: MethodCall, result: MethodChannel.Result) {
         val actionName = call.argument<String>("action")
-        val micOn = actionName == PipAction.MIC_ON.name
+        val micOn = actionName == "micOn"
         
         // Find any mic actions in the current layout and replace them
         if (actionsLayout.actions.contains(PipAction.MIC_ON) || 
@@ -333,7 +333,7 @@ class SimplePipModePlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
 
     private fun setCameraState(call: MethodCall, result: MethodChannel.Result) {
         val actionName = call.argument<String>("action")
-        val cameraOn = actionName == PipAction.CAMERA_ON.name
+        val cameraOn = actionName == "cameraOn"
         
         // Find any camera actions in the current layout and replace them
         if (actionsLayout.actions.contains(PipAction.CAMERA_ON) || 
