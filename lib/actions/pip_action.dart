@@ -11,6 +11,10 @@
 /// [previous] Previous action represented by previous icon
 /// [next] Next action represented by next icon
 /// [live] Live action (force player seeker to show latest content) represented by sorround icon
+/// [micOn] Microphone on action
+/// [micOff] Microphone off action
+/// [cameraOn] Camera on action
+/// [cameraOff] Camera off action
 enum PipAction {
   play,
   pause,
@@ -19,6 +23,11 @@ enum PipAction {
   live,
   rewind,
   forward,
+  custom,
+  micOn,
+  micOff,
+  cameraOn,
+  cameraOff,
 }
 
 // TODO(PuntitOwO): Create implement generic actions on runtime, so plugin users can create theirs own actions without needing to update this preset

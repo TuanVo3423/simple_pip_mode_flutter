@@ -15,5 +15,15 @@
     <string name="pip_action_rewind_10_description">Rewind 10</string>
     <string name="pip_action_forward_10">Forward 10</string>
     <string name="pip_action_forward_10_description">Rewind 10</string>
+    <string name="pip_action_custom">Custom</string>
+    <string name="pip_action_custom_description">Custom action</string>
+    <string name="pip_action_mic_on">Mic On</string>
+    <string name="pip_action_mic_on_description">Turn microphone on</string>
+    <string name="pip_action_mic_off">Mic Off</string>
+    <string name="pip_action_mic_off_description">Turn microphone off</string>
+    <string name="pip_action_camera_on">Camera On</string>
+    <string name="pip_action_camera_on_description">Turn camera on</string>
+    <string name="pip_action_camera_off">Camera Off</string>
+    <string name="pip_action_camera_off_description">Turn camera off</string>
 
 </resources>

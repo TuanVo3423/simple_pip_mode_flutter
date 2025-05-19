@@ -24,9 +24,41 @@ open class PipCallbackHelper {
         } else {
             channel.invokeMethod("onPipExited", null)
         }
+    }    fun onPipAction(action: PipAction) {
+        when (action) {
+            PipAction.CUSTOM -> {
+                channel.invokeMethod("onCustomPipAction", "custom_action")
+            }
+            PipAction.MIC_ON -> {
+                channel.invokeMethod("onMicAction", "mic_on")
+            }
+            PipAction.MIC_OFF -> {
+                channel.invokeMethod("onMicAction", "mic_off")
+            }
+            PipAction.CAMERA_ON -> {
+                channel.invokeMethod("onCameraAction", "camera_on")
+            }
+            PipAction.CAMERA_OFF -> {
+                channel.invokeMethod("onCameraAction", "camera_off")
+            }
+            else -> {
+                channel.invokeMethod("onPipAction", action.name.lowercase())
+            }
+        }
     }
-
-    fun onPipAction(action: PipAction) {
-        channel.invokeMethod("onPipAction", action.name.lowercase())
+    
+    // Additional method to send custom messages from the PIP action
+    fun sendCustomActionMessage(message: String) {
+        channel.invokeMethod("onCustomPipAction", message)
+    }
+    
+    // Additional method to send mic state messages from the PIP action
+    fun sendMicStateMessage(isMicOn: Boolean) {
+        channel.invokeMethod("onMicAction", if (isMicOn) "mic_on" else "mic_off")
+    }
+    
+    // Additional method to send camera state messages from the PIP action
+    fun sendCameraStateMessage(isCameraOn: Boolean) {
+        channel.invokeMethod("onCameraAction", if (isCameraOn) "camera_on" else "camera_off")
     }
 }

@@ -34,9 +34,14 @@ enum class PIP_METHODS(val methodName: String) {
     IS_PIP_ACTIVATED("isPipActivated"),
     IS_AUTO_PIP_AVAILABLE("isAutoPipAvailable"),
     ENTER_PIP_MODE("enterPipMode"),
+    EXIT_PIP_MODE("exitPipMode"),
     SET_PIP_LAYOUT("setPipLayout"),
     SET_IS_PLAYING("setIsPlaying"),
     SET_AUTO_PIP_MODE("setAutoPipMode"),
+    SEND_CUSTOM_ACTION_MESSAGE("sendCustomActionMessage"),
+    SET_MIC_STATE("setMicState"),
+    SET_CAMERA_STATE("setCameraState"),
+    SET_MIC_AND_CAMERA_STATES("setMicAndCameraStates"),
 }
 
 /** SimplePipModePlugin */
@@ -70,10 +75,33 @@ class SimplePipModePlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
                 }
                 intent.getStringExtra(EXTRA_ACTION_TYPE)?.let {
                     val action = PipAction.valueOf(it)
-                    action.afterAction()?.let {
-                        toggleAction(action)
+                    
+                    when (action) {
+                        // Special handling for custom action
+                        PipAction.CUSTOM -> {
+                            callbackHelper.onPipAction(action)
+                        }
+                        // Special handling for mic actions
+                        PipAction.MIC_ON, PipAction.MIC_OFF -> {
+                            action.afterAction()?.let {
+                                toggleAction(action)
+                            }
+                            callbackHelper.onPipAction(action)
+                        }
+                        // Special handling for camera actions
+                        PipAction.CAMERA_ON, PipAction.CAMERA_OFF -> {
+                            action.afterAction()?.let {
+                                toggleAction(action)
+                            }
+                            callbackHelper.onPipAction(action)
+                        }
+                        else -> {
+                            action.afterAction()?.let {
+                                toggleAction(action)
+                            }
+                            callbackHelper.onPipAction(action)
+                        }
                     }
-                    callbackHelper.onPipAction(action)
                 }
             }
         }.also { broadcastReceiver = it }
@@ -89,19 +117,21 @@ class SimplePipModePlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
     override fun onDetachedFromEngine(@NonNull binding: FlutterPlugin.FlutterPluginBinding) {
         channel.setMethodCallHandler(null)
         context.unregisterReceiver(broadcastReceiver)
-    }
-
-    @RequiresApi(Build.VERSION_CODES.O)
-    override fun onMethodCall(call: MethodCall, result: MethodChannel.Result) {
+    }    @RequiresApi(Build.VERSION_CODES.O)    override fun onMethodCall(call: MethodCall, result: MethodChannel.Result) {
         when (call.method) {
             PIP_METHODS.GET_PLATFORM_VERSION.methodName -> getPlatformVersion(result)
             PIP_METHODS.IS_PIP_AVAILABLE.methodName -> isPipAvailable(result)
             PIP_METHODS.IS_PIP_ACTIVATED.methodName -> isPipActivated(result)
             PIP_METHODS.IS_AUTO_PIP_AVAILABLE.methodName -> isAutoPipAvailable(result)
             PIP_METHODS.ENTER_PIP_MODE.methodName -> enterPipMode(call, result)
+            PIP_METHODS.EXIT_PIP_MODE.methodName -> exitPipMode(result)
             PIP_METHODS.SET_PIP_LAYOUT.methodName -> setPipLayout(call, result)
             PIP_METHODS.SET_IS_PLAYING.methodName -> setIsPlaying(call, result)
             PIP_METHODS.SET_AUTO_PIP_MODE.methodName -> setAutoPipMode(call, result)
+            PIP_METHODS.SEND_CUSTOM_ACTION_MESSAGE.methodName -> sendCustomActionMessage(call, result)
+            PIP_METHODS.SET_MIC_STATE.methodName -> setMicState(call, result)
+            PIP_METHODS.SET_CAMERA_STATE.methodName -> setCameraState(call, result)
+            PIP_METHODS.SET_MIC_AND_CAMERA_STATES.methodName -> setMicAndCameraStates(call, result)
             else -> result.notImplemented()
         }
     }
@@ -158,6 +188,28 @@ class SimplePipModePlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
         result.success(
             activity.enterPictureInPictureMode(params.build())
         )
+    }    /**
+     * Exits Picture-in-Picture mode without terminating the app
+     * This can be called from Flutter to programmatically exit PiP mode
+     * The window will be hidden but the app will remain in memory so user can reopen it
+     */    private fun exitPipMode(result: MethodChannel.Result) {
+        try {
+            // Check if the device supports PiP and if we're currently in PiP mode
+            if (activity.packageManager.hasSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE) &&
+                activity.isInPictureInPictureMode) {
+                
+                // Use moveTaskToBack which hides the activity without destroying it
+                activity.moveTaskToBack(true)
+                
+                result.success(true)
+            } else {
+                // If we're not in PiP mode, just return success
+                result.success(true)
+            }
+        } catch (e: Exception) {
+            Log.e("PIP", "Error exiting PiP mode: ${e.message}")
+            result.error("ExitPipError", "Error exiting PiP mode", e.message)
+        }
     }
 
     private fun setPipLayout(call: MethodCall, result: MethodChannel.Result) {
@@ -240,4 +292,134 @@ class SimplePipModePlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
         .replace(Regex("([a-z])([A-Z])"), "$1_$2")
         .replace(Regex("([a-z])([0-9])"), "$1_$2")
         .uppercase()
+
+    // New method to send custom action messages from PIP
+    private fun sendCustomActionMessage(call: MethodCall, result: MethodChannel.Result) {
+        val message = call.argument<String>("message") ?: "default_message"
+        channel.invokeMethod("onCustomPipAction", message)
+        result.success(true)
+    }
+
+    private fun setMicState(call: MethodCall, result: MethodChannel.Result) {
+        val actionName = call.argument<String>("action")
+        val micOn = actionName == PipAction.MIC_ON.name
+        
+        // Find any mic actions in the current layout and replace them
+        if (actionsLayout.actions.contains(PipAction.MIC_ON) || 
+            actionsLayout.actions.contains(PipAction.MIC_OFF)) {
+            
+            val targetAction = if (micOn) PipAction.MIC_ON else PipAction.MIC_OFF
+            
+            // Find current mic action index
+            var micActionIndex = actionsLayout.actions.indexOf(PipAction.MIC_ON)
+            if (micActionIndex == -1) {
+                micActionIndex = actionsLayout.actions.indexOf(PipAction.MIC_OFF)
+            }
+            
+            if (micActionIndex >= 0) {
+                actionsLayout.actions[micActionIndex] = targetAction
+                renderPipActions()
+                
+                // Send the mic state change back to Flutter
+                callbackHelper.sendMicStateMessage(micOn)
+                
+                result.success(true)
+                return
+            }
+        }
+        
+        result.success(false)
+    }
+
+    private fun setCameraState(call: MethodCall, result: MethodChannel.Result) {
+        val actionName = call.argument<String>("action")
+        val cameraOn = actionName == PipAction.CAMERA_ON.name
+        
+        // Find any camera actions in the current layout and replace them
+        if (actionsLayout.actions.contains(PipAction.CAMERA_ON) || 
+            actionsLayout.actions.contains(PipAction.CAMERA_OFF)) {
+            
+            val targetAction = if (cameraOn) PipAction.CAMERA_ON else PipAction.CAMERA_OFF
+            
+            // Find current camera action index
+            var cameraActionIndex = actionsLayout.actions.indexOf(PipAction.CAMERA_ON)
+            if (cameraActionIndex == -1) {
+                cameraActionIndex = actionsLayout.actions.indexOf(PipAction.CAMERA_OFF)
+            }
+            
+            if (cameraActionIndex >= 0) {
+                actionsLayout.actions[cameraActionIndex] = targetAction
+                renderPipActions()
+                
+                // Send the camera state change back to Flutter
+                callbackHelper.sendCameraStateMessage(cameraOn)
+                
+                result.success(true)
+                return
+            }
+        }
+        
+        result.success(false)
+    }
+
+    private fun setMicAndCameraStates(call: MethodCall, result: MethodChannel.Result) {
+        val micAction = call.argument<String>("micAction")
+        val cameraAction = call.argument<String>("cameraAction")
+        
+        val micOn = micAction == PipAction.MIC_ON.name
+        val cameraOn = cameraAction == PipAction.CAMERA_ON.name
+        
+        var micChanged = false
+        var cameraChanged = false
+        
+        // Update mic state if the layout has mic controls
+        if (actionsLayout.actions.contains(PipAction.MIC_ON) || 
+            actionsLayout.actions.contains(PipAction.MIC_OFF)) {
+            
+            val targetMicAction = if (micOn) PipAction.MIC_ON else PipAction.MIC_OFF
+            
+            // Find current mic action index
+            var micActionIndex = actionsLayout.actions.indexOf(PipAction.MIC_ON)
+            if (micActionIndex == -1) {
+                micActionIndex = actionsLayout.actions.indexOf(PipAction.MIC_OFF)
+            }
+            
+            if (micActionIndex >= 0) {
+                actionsLayout.actions[micActionIndex] = targetMicAction
+                micChanged = true
+                
+                // Send the mic state change back to Flutter
+                callbackHelper.sendMicStateMessage(micOn)
+            }
+        }
+        
+        // Update camera state if the layout has camera controls
+        if (actionsLayout.actions.contains(PipAction.CAMERA_ON) || 
+            actionsLayout.actions.contains(PipAction.CAMERA_OFF)) {
+            
+            val targetCameraAction = if (cameraOn) PipAction.CAMERA_ON else PipAction.CAMERA_OFF
+            
+            // Find current camera action index
+            var cameraActionIndex = actionsLayout.actions.indexOf(PipAction.CAMERA_ON)
+            if (cameraActionIndex == -1) {
+                cameraActionIndex = actionsLayout.actions.indexOf(PipAction.CAMERA_OFF)
+            }
+            
+            if (cameraActionIndex >= 0) {
+                actionsLayout.actions[cameraActionIndex] = targetCameraAction
+                cameraChanged = true
+                
+                // Send the camera state change back to Flutter
+                callbackHelper.sendCameraStateMessage(cameraOn)
+            }
+        }
+        
+        // If either state changed, update the PIP actions
+        if (micChanged || cameraChanged) {
+            renderPipActions()
+            result.success(true)
+        } else {
+            result.success(false)
+        }
+    }
 }
