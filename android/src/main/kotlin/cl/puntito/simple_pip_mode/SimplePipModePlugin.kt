@@ -321,7 +321,6 @@ class SimplePipModePlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
                 renderPipActions()
                 
                 // Send the mic state change back to Flutter
-                // callbackHelper.sendMicStateMessage(micOn)
                 
                 result.success(true)
                 return
@@ -352,7 +351,6 @@ class SimplePipModePlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
                 renderPipActions()
                 
                 // Send the camera state change back to Flutter
-                // callbackHelper.sendCameraStateMessage(cameraOn)
                 
                 result.success(true)
                 return
@@ -389,7 +387,6 @@ class SimplePipModePlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
                 micChanged = true
                 
                 // Send the mic state change back to Flutter
-                callbackHelper.sendMicStateMessage(micOn)
             }
         }
         
@@ -410,7 +407,6 @@ class SimplePipModePlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
                 cameraChanged = true
                 
                 // Send the camera state change back to Flutter
-                // callbackHelper.sendCameraStateMessage(cameraOn)
             }
         }
         
